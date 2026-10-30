@@ -1,7 +1,11 @@
 import configService from "../../config/config.service.js"
 import jwt from "JsonWebToken"
+import crypto from "crypto"
 import { Queries , models } from "../../db/index.js"
 import {enums} from "../index.js"
+import {exists, set , get} from "../services/cache.service.js"
+import {unAuthorizedException} from "../exceptions/index.js"
+import { getUserKey } from "../../module/auth/auth.service.js"
 
 
 const getTokenSecretsForRole = (role) => {
@@ -21,18 +25,31 @@ const getTokenSecretsForRole = (role) => {
 
     return secrets
 }
+
+export function getPrefixRevoke (userId){
+    return `RevokeToken::${userId}}`
+}
+
+export function getRevokeKey (userId,jti){
+    return `${getPrefixRevoke(userId)}::${jti}`
+}
+
+
+
 export const createTokens = ({userId , issuer , role= enums.roleEnum.user})=>{
     let secrets = getTokenSecretsForRole(role)
+    let jwtid = crypto.randomUUID()
     return {
             accessToken: jwt.sign({
             
                 sub : userId
                 }, secrets.access,
                 {
-                    expiresIn:"6h",
+                    expiresIn:configService.ACCESS_EX,
                     //notBefore: "10m" ,
                     issuer ,
                     audience:[role],
+                    jwtid: jwtid
                    // jwtid: jti.toString()
                    // issuer:   
                 }),
@@ -41,10 +58,11 @@ export const createTokens = ({userId , issuer , role= enums.roleEnum.user})=>{
                 sub : userId
                 }, secrets.refresh,
                 {
-                    expiresIn:"1d",
+                    expiresIn:configService.REFRESH_EX,
                     //notBefore: "10m" ,
                     issuer ,
                     audience:[role],
+                    jwtid:jwtid
                     //jwtid: jti.toString() + "0"
                    // issuer:   
                 })
@@ -53,12 +71,22 @@ export const createTokens = ({userId , issuer , role= enums.roleEnum.user})=>{
 
 
 export const verfiyToken = async (token, tokenType) => {
-    let {aud} = jwt.decode(token)
-    let secret = getTokenSecretsForType(tokenType , aud[0])
-    let verfiy = jwt.verify(token, secret)
-    let user = await Queries.findOne({model: models.userModel, where: {_id: verfiy.sub}})
-    
-    return user   
+    let decoded = jwt.decode(token)
+    if(await exists({key : getRevokeKey(decoded.sub,decoded.jti)})){
+        unAuthorizedException("you are already logged out")
+    }
+    let secret = getTokenSecretsForType(tokenType, decoded.aud[0])
+    let verify = jwt.verify(token, secret)
+    if (await exists({ key: getUserKey(decoded.sub) })) {
+        console.log("cached")
+        return await get({ key: getUserKey(decoded.sub) })
+    }
+    let user = await Queries.findOne({ model: models.userModel, where: { _id: verify.sub } })
+    if(user.changedAt && decoded.iat < user.changedAt){
+        unAuthorizedException("you are already logged out")
+    }
+    await set({ key: getUserKey(decoded.sub), value: user, ttl: 30 })
+    return user
 }
 
 const getTokenSecretsForType = (tokenType , role)=>{

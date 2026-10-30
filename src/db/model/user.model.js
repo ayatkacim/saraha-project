@@ -37,10 +37,7 @@ let userSchema = new  mongoose.Schema({
     },
     image:String,
     deletedAt:Date,
-    confirmEmail:{
-        type: Date,
-        default: new Date()
-    },
+    confirmEmail:Boolean,
     phone: String,
     role:{
         type: Number,
@@ -51,7 +48,8 @@ let userSchema = new  mongoose.Schema({
         type: Number,
         enum:Object.values(enums.providerEnum),
         default:enums.providerEnum.system
-    }
+    },
+    changedAt: Number
 
 },{
 

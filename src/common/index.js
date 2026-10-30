@@ -1,4 +1,6 @@
 export {myHash, myCompare , response, encrypting , decrypting, createTokens , verfiyToken} from "./utiltes/index.js"
+//export * as utils from "./utiltes/index.js"
 export * as middleware from "./middleware/index.js"
 export * as enums from "./enum/index.js"
 export * as exceptions from "./exceptions/index.js"
+export {default as GF} from "./utiltes/generalFields.js"
