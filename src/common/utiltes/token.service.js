@@ -1,7 +1,7 @@
 import configService from "../../config/config.service.js"
 import jwt from "JsonWebToken"
 import crypto from "crypto"
-import { Queries , models } from "../../db/index.js"
+import {userRepo as ur} from "../../db/index.js"
 import {enums} from "../index.js"
 import {exists, set , get} from "../services/cache.service.js"
 import {unAuthorizedException} from "../exceptions/index.js"
@@ -81,7 +81,7 @@ export const verfiyToken = async (token, tokenType) => {
         console.log("cached")
         return await get({ key: getUserKey(decoded.sub) })
     }
-    let user = await Queries.findOne({ model: models.userModel, where: { _id: verify.sub } })
+    let user = await ur.findUser({ where: { _id: verify.sub } })
     if(user.changedAt && decoded.iat < user.changedAt){
         unAuthorizedException("you are already logged out")
     }

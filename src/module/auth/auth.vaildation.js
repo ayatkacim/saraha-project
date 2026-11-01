@@ -48,7 +48,8 @@ let signupBody = (lang)=> loginBody(lang).safeExtend({
 })
 
 export let signupSchema =(lang)=> z.object({
-    body:signupBody(lang)
+    body:signupBody(lang),
+    file:GF.file(lang)
 })
 
 export let rotateTokenSchema =(lang)=> z.object({

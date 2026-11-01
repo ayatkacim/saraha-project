@@ -1,12 +1,10 @@
 
-import {verfiyToken , enums} from "../../common/index.js"
-import { models, Queries } from "../../db/index.js"
-//import {unAuthorizedException} from "../../common/exceptions/index.js"
+
+import {userRepo as ur} from "../../db/index.js"
 
 
 export const getUserById = async (userId ) => {
-    let user= await Queries.findOne({
-        model: models.userModel,
+    let user= await ur.findUser({
         where: {_id : userId},
         select: "-password -confirmEmail -__v -role -provider"
     })
@@ -15,7 +13,7 @@ export const getUserById = async (userId ) => {
 
 } 
 
-export const getAllUsers = async (page,limit)=> await Queries.find({model : models.userModel , limit:limit , skip:(page-1)*limit })
+export const getAllUsers = async (page,limit)=> await ur.findUsers({ limit:limit , skip:(page-1)*limit })
 
 
 

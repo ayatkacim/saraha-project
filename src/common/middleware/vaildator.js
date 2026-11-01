@@ -4,7 +4,8 @@ export const vaildator = (schema)=>{
             body: req.body,
             params : req.params,
             query: req.query,
-            headers:req.headers
+            headers:req.headers,
+            file: req.file
         })
         
             if(!success){

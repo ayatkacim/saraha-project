@@ -3,12 +3,13 @@ import { response } from "../../common/utiltes/index.js";
 import { middleware } from "../../common/index.js";
 import * as as from "./auth.service.js"
 import * as av from "./auth.vaildation.js"
-import auth from "../../common/middleware/auth.js";
+import { fileTypes } from "../../common/middleware/multer.local.js";
 
-let {vaildator} = middleware
+
+let {vaildator , auth , multerLocal , processFiles} = middleware
 let authRouter = Router()
 
-authRouter.post("/signup",vaildator(av.signupSchema), async (req, res, next)=>{
+authRouter.post("/signup", multerLocal({fileType:fileTypes.images}).single("image"), processFiles({fileType:fileTypes.images}),vaildator(av.signupSchema), async (req, res, next)=>{
     //req.body.DOB = new Date(req.body.DOB)
     // let {success, error , data} = av.signupSchema.safeParse(req.body)
     // if(!success){
@@ -29,7 +30,8 @@ authRouter.post("/signup",vaildator(av.signupSchema), async (req, res, next)=>{
 })
 
 authRouter.post("/confirmEmail", async (req, res, next)=>{
-    let user = await as.confirmEmail(req.body)
+    console.log(req.file)
+    let user = await as.confirmEmail(req.vaildate.body , req.file)
 
     response({
         res,

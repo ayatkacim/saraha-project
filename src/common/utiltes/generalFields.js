@@ -11,7 +11,7 @@ export default{
         {error:lang == "ar" ? "كلمه السر قصيره للغايه": "password is too short"}),
     confirmPassword: (lang)=> z.string().max(20).min(5),
     fullName: (lang)=> z.string().regex(/^[A-Za-z]{3,20}\s[A-Za-z]{3,20}$/ , {error :getErrorMessage("fullName", lang)}),
-    gender: (lang)=> z.union([z.literal(enums.genderEnum.male), z.literal(enums.genderEnum.female)],{error:"gender must be male or female"}),
+    gender: (lang) => z.coerce.string().pipe(z.enum(enums.genderEnum, { error: "gender must be male or female" })),
     DOB: (lang)=> z.string(),
     page : (lang)=> z.coerce.number().gte(1),
     limit : (lang)=> z.coerce.number().gte(1),
@@ -25,5 +25,12 @@ export default{
             falsy:["false"],
             case:"sensitive",
             error:"this value must be true or false"
-        })
+    }),
+    file: (lang) => z.object({
+        fieldname: z.string(),
+        originalname: z.string(),
+        encoding: z.string(),
+        mimetype: z.string(),
+        size: z.number()
+    }).optional(),
 }

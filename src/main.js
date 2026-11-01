@@ -16,6 +16,8 @@ await connection()
 app.use(express.json())
 app.use("/auth", routers.authRouter)
 app.use("/user", routers.userRouter)
+app.use("/uploads", express.static("uploads"))
+//app.use("/message", routers.messageRouter)
 app.get("/",(req, res, next)=>{
     res.status(200).json({
         message: "welcome to my app"

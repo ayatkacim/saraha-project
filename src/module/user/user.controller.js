@@ -5,6 +5,7 @@ import * as uv from "./user.vaildation.js"
 import { decrypting, middleware } from "../../common/index.js";
 import { roleEnum } from "../../common/enum/role.enum.js";
 import { vaildator } from "../../common/middleware/vaildator.js";
+import { fileTypes, multerLocal, multerMemory, processFiles } from "../../common/middleware/multer.local.js";
 let userRouter = Router()
 let cache ={}
 
@@ -61,7 +62,6 @@ userRouter.get("/all",middleware.auth,vaildator(uv.paginationSchema) ,middleware
 })
 
 
-
 userRouter.get("/rotate-token", async (req, res)=>{
     let user = await us.rotateToken(req.headers.authorization)
 
@@ -74,5 +74,14 @@ userRouter.get("/rotate-token", async (req, res)=>{
 
 })
 
+userRouter.post("/image",multerLocal({fileType: [...fileTypes.images]}).fields([{name:"image" , maxCount:3}]),
+processFiles({fileType:[...fileTypes.images]}),
+(req, res, next) => {
+
+    response({
+        res,
+        data: { file: req.file || req.files, body: req.body}
+    })
+})
 
 export default userRouter

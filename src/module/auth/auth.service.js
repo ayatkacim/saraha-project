@@ -1,6 +1,6 @@
 
 import { exceptions , verfiyToken , createTokens , myHash ,myCompare, enums, encrypting} from "../../common/index.js"
-import {models , Queries} from "../../db/index.js"
+import {userRepo as ur} from "../../db/index.js"
 import jwt from "jsonwebtoken"
 import {del, exists, get, keys, set , incr} from "../../common/services/index.js"
 import configService from "../../config/config.service.js"
@@ -20,10 +20,22 @@ export const getUserOTPKey = userId=> `OTP::${getUserKey(userId)}`
 export const getUserOTPForgetKey = userId=> `OTP::forget::${getUserKey(userId)}`
 export const getUserOTPTriesKey = userId=> `tries::${getUserKey(userId)}`
 
-export const createUser = async (data)=>{
-    let exists = await Queries.findOne({ model: models.userModel, where: { email: data.email } , check:true })
+export const createUser = async (data , file)=>{
+    let exists = await ur.findUser({  where: { email: data.email } , check:true })
     if(exists) throw exceptions.ConflictException("this user already exist")
-    let user = await Queries.create({model:models.userModel , data:{...data, phone: data.phone ? encrypting(data.phone) : null ,DOB : new Date(data.DOB), password: await myHash(data.password)}})
+        
+    let saved = file?.fullPath || file?.path
+    let imagePath = saved ? `/uploads/${path.basename(saved)}` : null
+
+    let user = await ur.createUser({
+        data: {
+            ...data,
+            phone: data.phone ? encrypting(data.phone) : null,
+            DOB: new Date(data.DOB),
+            password: await myHash(data.password.trim()),
+            image: imagePath
+        }
+    })
     let otp = crypto.randomInt(100000 , 1000000)
     set({
         key: getUserOTPKey(user._id),
@@ -43,10 +55,7 @@ export const createUser = async (data)=>{
 }
 
 export const confirmEmail =async ({otp,email})=>{
-    let user = await Queries.findOne({
-        model : models.userModel,
-        where : {email}
-    })
+    let user = await ur.findUser({where : {email}})
 
     await blockUser(user._id)
     let redisOtp = await get({key :getUserOTPKey(user._id) })
@@ -61,11 +70,7 @@ export const confirmEmail =async ({otp,email})=>{
 }
 
 export const resendOtp = async ({ email, topic }) => {
-    let user = await Queries.findOne({
-        model: models.userModel,
-        where: { email }
-    })
-
+    let user = await ur.findUser({where: { email }})
     switch (topic) {
         case "signup":
             const key = getUserSendKey(user._id)
@@ -100,11 +105,9 @@ export const resendOtp = async ({ email, topic }) => {
 
 export const login = async (where , issuer)=>{
     let {email , password} = where
-    let user = await Queries.findOne({model: models.userModel , where:{email}})
-    //let user = await userModel.findOne(data)
+    let user = await ur.findUser({ where:{email}})
     console.log(user)
     if(!user || !await myCompare({plainText: password , hashedText: user.password})) throw exceptions.NotFoundException("user not Found")
-        //throw new Error("user not found", {cause:404})
     let jti= Math.ceil(Math.random()*1000)
     
     let tokens = createTokens({
@@ -129,8 +132,8 @@ export const loginWithGmail = async ({ idToken }, issuer) => {
         return { tokens, status: 200 }
     }
 
-    user = await Queries.create({
-        model: models.userModel, data: {
+    user = await ur.createUser({
+        data: {
             email, firstName: given_name, lastName: family_name, image: picture, provider: enums.providerEnum.google , confirmEmail:true
         }
     })
@@ -146,8 +149,7 @@ export const logout = async (auth , type)=>{
     switch (type) {
         case enums.logoutEnum.all:
             let data = jwt.decode(token)
-            await Queries.updateOne({
-                model:models.userModel,
+            await ur.updateOneUser({
                 data:{changedAt : Math.ceil(Date.now()/1000)},
                 where : {_id : data.sub}
             })
@@ -185,8 +187,7 @@ export const rotateToken = async (refreshToken , issuer)=>{
 }
 
 export const forgetPassword= async({email})=>{
-    let user = await Queries.findOne({
-        model : models.userModel ,
+    let user = await ur.findUser({
         where :{ email }
     })
     await user.updateOne({
@@ -205,8 +206,7 @@ export const forgetPassword= async({email})=>{
 }
 
 export const resetPassword = async ({ email, otp, newPassword }) => {
-    let user = await Queries.findOne({
-        model: models.userModel,
+    let user = await ur.findUser({
         where: { email }
     })
     await blockUser(user._id)

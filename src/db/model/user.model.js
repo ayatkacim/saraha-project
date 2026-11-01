@@ -31,7 +31,7 @@ let userSchema = new  mongoose.Schema({
     },
     DOB :Date,
     gender:{
-        type: Number,
+        type: String,
         enum:Object.values(enums.genderEnum),
         default:enums.genderEnum.male
     },
